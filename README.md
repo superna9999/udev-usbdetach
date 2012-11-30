@@ -17,7 +17,7 @@ So what ?
 You must find which USD device `/dev/ttyUSBx` is, with which VendorID/ProductID,
 which interface number and which device number and use this to detach the
 driver from this specific device. Informations can be gathered with libudev, 
-and driver dan be detached with libUSB.
+and driver can be detached with libUSB.
 
 That's what USBdetach do.
 
