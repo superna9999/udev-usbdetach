@@ -433,7 +433,8 @@ int main(int argc, char **argv) {
     // are we acting for real ?
     if(!donothing) {
       if(libusb_kernel_driver_active(devhaccess, targetdevice.iface) == 1) {
-        printf("kernel driver (or something) is active on interface %u... trying to detach\n", targetdevice.iface);
+        if(verbose)
+          printf("kernel driver (or something) is active on interface %u... trying to detach\n", targetdevice.iface);
         if(libusb_detach_kernel_driver(devhaccess, targetdevice.iface)) {
           fprintf(stderr,"Unable to detach kernel driver from interface %u.\n", targetdevice.iface);
           giveup(devhaccess,ctx);
