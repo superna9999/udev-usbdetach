@@ -102,7 +102,7 @@ int printdesc (struct libusb_device_handle *handle, uint8_t idx) {
     return(1);
 
   if(ret > 1)
-    printf("%s\n", buffer);
+    printf("'%s'\n", buffer);
 
   return(0);
 }
@@ -202,7 +202,6 @@ int main(int argc, char **argv) {
         if(chkusbid(optarg)) badarg();
         targetdevice.pid = (unsigned int)strtol(optarg+5, NULL, 16);
         targetdevice.complete |= 2;
-        optarg[4]=0;
         targetdevice.vid = (unsigned int)strtol(optarg, NULL, 16);
         if(targetdevice.vid !=0) targetdevice.complete |= 1;
         break;
