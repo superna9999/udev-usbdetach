@@ -118,7 +118,6 @@ void printinfo() {
   printf(" -p <file>                 full path to dev node of the device to detach (this cannot be used with -d, -i or -n)\n");
   printf(" -v                        be verbose\n");
   printf(" -s                        simulate (don't detach and claim)\n");
-  exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char **argv) {
@@ -169,6 +168,7 @@ int main(int argc, char **argv) {
       case 'h':
       case 'V':
         printinfo();
+        exit(EXIT_SUCCESS);
         break;
       case 'i':
         errno = 0;
@@ -212,6 +212,11 @@ int main(int argc, char **argv) {
         fprintf(stderr,"Unknow option\n");
         exit(EXIT_FAILURE);
     }
+  }
+
+  if(optind <= 1 | optind < argc) {
+    printinfo();
+    exit(EXIT_FAILURE);
   }
 
   /* cannot work with vid/pid and /dev path at the same time (targetdevice partialy filled) */
@@ -302,6 +307,7 @@ int main(int argc, char **argv) {
     udev_device_unref(dev);
     udev_unref(udev);
   }
+
   /*** END OF UDEV STUFF ***/
 
   /* check what we have from getopt or udev */
