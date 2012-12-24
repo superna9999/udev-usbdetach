@@ -26,6 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <sys/errno.h>
 #include <getopt.h>
 #include <regex.h>
@@ -33,7 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <libudev.h>
 #include <libusb.h>
 
-#define OPT "shfVvd:i:p:n:"
+#define OPT "rshfVvd:i:p:n:"
 #define DAREGEX "^[0-9a-fA-F]{4}:[0-9a-fA-F]{4}$"
 
 int verbose;
@@ -125,8 +126,9 @@ int main(int argc, char **argv) {
 
   char *endptr;
 
-  int donothing=0;
+  int donothing = 0;
   int force = 0;
+  int reattach = 0;
 
   libusb_context *ctx = NULL;
 
@@ -156,6 +158,9 @@ int main(int argc, char **argv) {
 
   while ((optch = getopt(argc, argv, OPT)) != -1) {
     switch (optch) {
+      case 'r':
+        reattach=1;
+        break;
       case 's':
         donothing=1;
         break;
@@ -214,7 +219,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  if(optind <= 1 | optind < argc) {
+  if(optind <= 1 || optind < argc) {
     printinfo();
     exit(EXIT_FAILURE);
   }
@@ -465,6 +470,19 @@ int main(int argc, char **argv) {
       if(libusb_release_interface(devhaccess,targetdevice.iface) !=0)
         fprintf(stderr,"libusb_release_interface  Error : %s (%d)\n",
             strerror(errno),errno);
+
+      if(reattach) {
+        printf("Device detached. Press Enter to continue and reattach the device...\n");
+        getchar();
+        if(libusb_attach_kernel_driver(devhaccess, targetdevice.iface)) {
+          fprintf(stderr,"Unable to attach kernel driver from interface %u.\n", targetdevice.iface);
+        }
+        // just checking
+        if(verbose) printf("Check with claiming interface %u\n",targetdevice.iface);
+        if(libusb_claim_interface(devhaccess, targetdevice.iface) != 0) {
+          if(verbose) printf("Cannot claim device with interface %d. That's ok.\n", targetdevice.iface);
+        }
+      }
     }
 
     if(verbose) printf("Closing device...\n");
