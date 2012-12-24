@@ -475,7 +475,7 @@ int main(int argc, char **argv) {
         printf("Device detached. Press Enter to continue and reattach the device...\n");
         getchar();
         if(libusb_attach_kernel_driver(devhaccess, targetdevice.iface)) {
-          fprintf(stderr,"Unable to attach kernel driver from interface %u.\n", targetdevice.iface);
+          fprintf(stderr,"Unable to attach kernel driver to interface %u.\n", targetdevice.iface);
         }
         // just checking
         if(verbose) printf("Check with claiming interface %u\n",targetdevice.iface);
