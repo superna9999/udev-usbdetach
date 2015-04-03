@@ -35,7 +35,7 @@
 #include <libudev.h>
 #include <libusb.h>
 
-#define OPT "shVvp:l:"
+#define OPT "shVvp:l:a"
 #define DAREGEX "^[0-9a-fA-F]{4}:[0-9a-fA-F]{4}$"
 
 int verbose;
@@ -100,6 +100,7 @@ void printinfo() {
     printf(" -p syspath                use sys path instead of udev environment\n");
     printf(" -l logfile                output debug, verbose and error to log file\n");
     printf(" -s                        simulate (don't detach and claim)\n");
+    printf(" -a                        actually try to attach interfaces to drivers\n");
 }
 
 int main(int argc, char **argv) {
@@ -108,6 +109,11 @@ int main(int argc, char **argv) {
     char *syspath = NULL;
 
     int donothing = 0;
+    int doattach = 0;
+
+    unsigned ifaces[256];
+    unsigned ifaces_all = 0;
+    unsigned ifaces_max = 0;
 
     struct udev *udev_ctx;
     struct udev_device *udev_dev = NULL;
@@ -135,6 +141,9 @@ int main(int argc, char **argv) {
             case 's':
                 donothing=1;
                 break;
+            case 'a':
+                doattach=1;
+                break;
             case 'v':
                 verbose = 1;
                 break;
@@ -161,6 +170,49 @@ int main(int argc, char **argv) {
                 exit(EXIT_FAILURE);
         }
     }
+
+    // Reset ifaces sel, default all interfaces
+    memset(ifaces, 0, sizeof(ifaces));
+    ifaces_all = 1;
+
+    if (optind < argc)
+    {
+        int i;
+        for(i = optind ; i < argc ; ++i)
+        {
+            unsigned iface_idx = atoi(argv[i]);
+            if (iface_idx > 255)
+            {
+                fprintf(stderr, "Invalid interface number '%d'\n", iface_idx);
+                exit(EXIT_FAILURE);
+            }
+            if (!ifaces[iface_idx])
+            {
+                ifaces[iface_idx] = 1;
+                if (verbose)
+                    printf("Selecting interface %d to detach...\n", iface_idx);
+                ifaces_all = 0;
+                if (iface_idx > ifaces_max)
+                    ifaces_max = iface_idx;
+            }
+            else
+            {
+                fprintf(stderr, "Interface number '%d' already selected for detach\n", iface_idx);
+            }
+        }
+    }
+
+    if (!ifaces_all && verbose)
+    {
+        int i;
+        printf("Selected interfaces to detach : ");
+        for(i = 0 ; i < 256 ; ++i)
+            if(ifaces[i])
+                printf("%d ", i);
+        printf("\n");
+    }
+    else if (verbose)
+        printf("All interfaces will be detached\n");
 
     udev_ctx = udev_new();
     if (!udev_ctx)
@@ -275,6 +327,12 @@ int main(int argc, char **argv) {
                 continue;
             }
 
+            if (!ifaces_all && ifaces_max >= nbrinterf)
+            {
+                fprintf(stderr, "Maximum specified interface '%d' is invalid for this device interface count '%d'\n", ifaces_max, nbrinterf);
+                continue;
+            }
+
             found = device;
             memcpy (&fdesc, &desc, sizeof(fdesc));
             break;
@@ -309,34 +367,67 @@ int main(int argc, char **argv) {
             int iface;
             for(iface = 0 ; iface < nbrinterf ; ++iface) 
             {
-                if(libusb_kernel_driver_active(devhaccess, iface) == 1) {
-                    if(verbose)
-                        printf("kernel driver (or something) is active on interface %u... trying to detach\n", iface);
-                    if(libusb_detach_kernel_driver(devhaccess, iface)) {
-                        fprintf(stderr,"Unable to detach kernel driver from interface %u.\n", iface);
+                if (!ifaces_all && !ifaces[iface])
+                    continue;
+
+                if (doattach)
+                {
+                    if(libusb_kernel_driver_active(devhaccess, iface) == 0) {
+                        if(verbose)
+                            printf("kernel driver (or something) is not active on interface %u... trying to attach\n", iface);
+                        if(libusb_attach_kernel_driver(devhaccess, iface)) {
+                            fprintf(stderr,"Unable to attach kernel driver from interface %u.\n", iface);
+                            giveup(devhaccess,ctx);
+                        }
+                        if(verbose)
+                            printf("Kernel driver attached.\n");
+                    } else {
+                        if(verbose)
+                            printf("No kernel detached. Nothing to do. Claiming device for checking.\n");
+                    }
+
+                    // just checking
+                    if(verbose) printf("Check with claiming interface %u\n",iface);
+                    if(libusb_claim_interface(devhaccess, iface) == 0) {
+                        fprintf(stderr,"libusb_claim_interface  Error : %s (%d)\n",
+                                strerror(errno),errno);
+                        libusb_release_interface(devhaccess,iface);
                         giveup(devhaccess,ctx);
                     }
-                    if(verbose)
-                        printf("Kernel driver detached.\n");
-                } else {
-                    if(verbose)
-                        printf("No kernel attached. Nothing to do. Claiming device for checking.\n");
+
+                    if(verbose) printf("All interface %d are belong to driver\n", iface);
                 }
+                else
+                {
+                    if(libusb_kernel_driver_active(devhaccess, iface) == 1) {
+                        if(verbose)
+                            printf("kernel driver (or something) is active on interface %u... trying to detach\n", iface);
+                        if(libusb_detach_kernel_driver(devhaccess, iface)) {
+                            fprintf(stderr,"Unable to detach kernel driver from interface %u.\n", iface);
+                            giveup(devhaccess,ctx);
+                        }
+                        if(verbose)
+                            printf("Kernel driver detached.\n");
+                    } else {
+                        if(verbose)
+                            printf("No kernel attached. Nothing to do. Claiming device for checking.\n");
+                    }
 
-                // just checking
-                if(verbose) printf("Check with claiming interface %u\n",iface);
-                if(libusb_claim_interface(devhaccess, iface) != 0) {
-                    fprintf(stderr,"libusb_claim_interface  Error : %s (%d)\n",
-                            strerror(errno),errno);
-                    giveup(devhaccess,ctx);
+                    // just checking
+                    if(verbose) printf("Check with claiming interface %u\n",iface);
+                    if(libusb_claim_interface(devhaccess, iface) != 0) {
+                        fprintf(stderr,"libusb_claim_interface  Error : %s (%d)\n",
+                                strerror(errno),errno);
+                        giveup(devhaccess,ctx);
+                    }
+
+                    if(verbose) printf("All interface %d are belong to me\n", iface);
+
+                    if(verbose) printf("Release interface %u...\n",iface);
+                    if(libusb_release_interface(devhaccess,iface) !=0)
+                        fprintf(stderr,"libusb_release_interface  Error : %s (%d)\n",
+                                strerror(errno),errno);
                 }
-
-                if(verbose) printf("All interface %d are belong to me\n", iface);
-
-                if(verbose) printf("Release interface %u...\n",iface);
-                if(libusb_release_interface(devhaccess,iface) !=0)
-                    fprintf(stderr,"libusb_release_interface  Error : %s (%d)\n",
-                            strerror(errno),errno);
             }
         }
 

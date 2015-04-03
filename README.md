@@ -32,13 +32,22 @@ You can use -l to specify a log file, and -v to enable all debug:
     ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6011", MODE="0666", RUN+="/usr/local/bin/udev-usbdetach -v -l /var/log/udev-usbdetach.log"
     LABEL="usb_serial_end"
 
+You can specify which interfaces you need to detach :
+
+    udev-usbdetach 0 3 5
+
+Will detach interfaces 0, 3, and 5 only. If nothing is specified, all interfaces will be detached.
+
+You can force attaching instead of detaching interfaces, fo example if all interfaces has be dtached and you wish to re-attach interface 2 you can use the "-a" parameter:
+
+    udev-usbdetach -p /sys/devices/.... -a 2
+
 Requirements :
  - libusb-1.0
  - libudev
  - linux, udev & compiler
 
 Roadmap :
- - Add interfaces selection instead of all interfaces
  - Add configure script
 
 Warnings :
