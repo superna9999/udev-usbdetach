@@ -43,12 +43,12 @@ You can force attaching instead of detaching interfaces, fo example if all inter
     udev-usbdetach -p /sys/devices/.... -a 2
 
 Requirements :
- - libusb-1.0
- - libudev
- - linux, udev & compiler
+ - libusb-dev or libusbx-devel
+ - libudev-dev or systemd-devel
+ - linux, udev & gcc
 
 Roadmap :
  - Add configure script
 
 Warnings :
- - Only tested under Ubuntu 14.04 LTS and FTDI Quad RS-232 Device
+ - Only tested under Ubuntu 14.04 LTS/Fedora 19 with FTDI Quad RS-232 Device
