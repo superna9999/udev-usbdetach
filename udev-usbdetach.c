@@ -1,5 +1,6 @@
 /*
    Copyright (c) 2012, Denis Bodor
+   Copyright (c) 2015, Neil Armstrong
    All rights reserved.
 
    Redistribution and use in source and binary forms, with or without
@@ -92,7 +93,7 @@ int printdesc (struct libusb_device_handle *handle, uint8_t idx) {
 }
 
 void printinfo() {
-    printf("USBdetach v0.1\nCopyright (c) 2012 Denis Bodor <lefinnois@gmail.com>\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law.\n");
+    printf("dev-usbdetach v0.1\nCopyright (c) 2015 Neil Armstrong <superna9999@gmail.com>\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law.\n");
     printf("Syntaxe :\n");
     printf(" -h -V                     you read this right now\n");
     printf(" -v                        be verbose\n");
